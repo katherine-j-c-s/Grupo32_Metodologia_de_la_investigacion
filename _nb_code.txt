@@ -1,0 +1,353 @@
+===== CELL 2 =====
+import os
+from pathlib import Path
+import json
+
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+from IPython.display import Image, display
+import statsmodels.formula.api as smf
+
+
+def buscar_raiz():
+    """Devuelve la carpeta que contiene data/processed/panel_mensual.csv."""
+    marcador = Path("data") / "processed" / "panel_mensual.csv"
+
+    # 1) Carpeta actual, sus padres y la subcarpeta entrega_colab (ejecución local).
+    actual = Path.cwd().resolve()
+    for carpeta in [actual, actual / "entrega_colab", *actual.parents]:
+        if (carpeta / marcador).exists():
+            return carpeta
+
+    # 2) Ubicaciones habituales en Google Colab.
+    content = Path("/content")
+    candidatas = [
+        content,
+        content / "entrega_colab",
+        content / "drive" / "MyDrive" / "entrega_colab",
+        content / "drive" / "MyDrive" / "tp3" / "entrega_colab",
+    ]
+    if content.exists():
+        candidatas += sorted(p for p in content.glob("*/") if p.is_dir())
+    mydrive = content / "drive" / "MyDrive"
+    if mydrive.exists():
+        candidatas += sorted(p for p in mydrive.glob("*/") if p.is_dir())
+        candidatas += sorted(p for p in mydrive.glob("*/*/") if p.is_dir())
+    for carpeta in candidatas:
+        if (carpeta / marcador).exists():
+            return carpeta
+
+    # 3) Búsqueda acotada dentro de /content (máximo 4 niveles).
+    if content.exists():
+        for carpeta, subcarpetas, _ in os.walk(content):
+            ruta = Path(carpeta)
+            if len(ruta.relative_to(content).parts) >= 4:
+                subcarpetas[:] = []
+            else:
+                subcarpetas[:] = [
+                    s for s in subcarpetas
+                    if s not in {"drive", ".git", ".venv", "__pycache__"}
+                ]
+            if (ruta / marcador).exists():
+                return ruta
+
+    return None
+
+
+ROOT = buscar_raiz()
+
+# En Colab: si no se encontró, montar Drive y volver a buscar.
+if ROOT is None:
+    try:
+        from google.colab import drive
+
+        if not Path("/content/drive/MyDrive").exists():
+            drive.mount("/content/drive")
+        ROOT = buscar_raiz()
+    except Exception:
+        pass
+
+if ROOT is None:
+    ROOT = Path.cwd()
+
+PROC = ROOT / "data" / "processed"
+FIG = ROOT / "outputs" / "figures"
+TAB = ROOT / "outputs" / "tables"
+
+pd.set_option("display.width", 180)
+pd.set_option("display.max_columns", 30)
+pd.set_option("display.float_format", lambda x: f"{x:,.3f}")
+
+assert (PROC / "panel_mensual.csv").exists(), (
+    "No se encontraron las tablas procesadas. Verificar que la carpeta data/processed "
+    "esté junto al notebook o dentro de entrega_colab en /content."
+)
+print("Raíz del proyecto:", ROOT)
+
+===== CELL 4 =====
+archivos = {
+    "calidad": ("calidad_datos.csv", None),
+    "panel": ("panel_mensual.csv", ["fecha"]),
+    "panel_linea": ("panel_linea_mes.csv", ["fecha"]),
+    "tarifa": ("tarifa_mensual.csv", ["fecha"]),
+    "demanda_mensual": ("demanda_mensual_total.csv", ["fecha"]),
+    "demanda_anual": ("demanda_anual_total.csv", None),
+    "demanda_linea": ("demanda_anual_linea.csv", None),
+    "demanda_estacion": ("demanda_estacion_anual.csv", None),
+    "catalogo": ("estaciones_catalogo.csv", None),
+    "nuevas": ("nuevas_estaciones.csv", None),
+    "comparacion": ("comparacion_viajes_anual.csv", None),
+}
+
+datos = {}
+for nombre, (archivo, fechas) in archivos.items():
+    datos[nombre] = pd.read_csv(
+        PROC / archivo, encoding="utf-8-sig", parse_dates=fechas
+    )
+
+for nombre, df in datos.items():
+    print(f"{nombre:20s} {df.shape[0]:5d} filas x {df.shape[1]:2d} columnas")
+
+print("\nRango temporal del panel:", datos["panel"]["fecha"].min().date(), "a", datos["panel"]["fecha"].max().date())
+print("Rango temporal de la tarifa:", datos["tarifa"]["fecha"].min().date(), "a", datos["tarifa"]["fecha"].max().date())
+
+===== CELL 6 =====
+calidad = datos["calidad"].copy()
+tabla_calidad = calidad[[
+    "anio", "filas_leidas", "filas_validas", "filas_descartadas",
+    "fechas_distintas", "cobertura_dias_pct", "estaciones_distintas",
+    "porcentaje_cero", "duplicados_clave", "suma_total",
+]].copy()
+tabla_calidad["suma_total"] = (tabla_calidad["suma_total"] / 1_000_000).round(1)
+tabla_calidad.columns = [
+    "Año", "Filas leídas", "Filas válidas", "Filas descartadas",
+    "Días con registro", "Cobertura (%)", "Estaciones (nombres)",
+    "Registros en cero (%)", "Duplicados", "Viajes (millones)",
+]
+display(tabla_calidad)
+
+comparacion = datos["comparacion"].copy()
+comparacion["viajes_molinetes"] = (comparacion["viajes_molinetes"] / 1_000_000).round(1)
+comparacion["viajes_anual"] = (comparacion["viajes_anual"] / 1_000_000).round(1)
+comparacion.columns = ["Año", "Molinetes (mill.)", "Viajes anual (mill.)", "Diferencia", "Diferencia (%)"]
+display(comparacion)
+
+print("Total de filas leídas en los seis archivos:", f"{calidad['filas_leidas'].sum():,.0f}")
+print("Total de filas válidas:", f"{calidad['filas_validas'].sum():,.0f}")
+print("Diferencia máxima contra viajes_anual.csv:", comparacion["Diferencia"].abs().max())
+
+===== CELL 8 =====
+tarifa = datos["tarifa"].sort_values("fecha").reset_index(drop=True)
+
+cambios = tarifa[tarifa["cambio_tarifario"]].copy()
+cambios["tarifa_anterior"] = tarifa["precio_nominal"].shift(1)
+cambios["real_anterior"] = tarifa["precio_real"].shift(1)
+tabla_cambios = cambios[[
+    "fecha", "tarifa_anterior", "precio_nominal", "var_nominal_pct",
+    "real_anterior", "precio_real", "var_real_pct",
+]].copy()
+tabla_cambios.columns = [
+    "Fecha", "Tarifa anterior ($)", "Tarifa nueva ($)", "Var. nominal (%)",
+    "Tarifa real anterior ($ dic-2016)", "Tarifa real nueva ($ dic-2016)", "Var. real (%)",
+]
+tabla_cambios["Fecha"] = tabla_cambios["Fecha"].dt.strftime("%Y-%m")
+display(tabla_cambios.round(2))
+
+ini = tarifa.iloc[0]
+fin = tarifa[tarifa["fecha"] == "2019-04-01"].iloc[0]
+print(f"Tarifa nominal: ${ini['precio_nominal']:.2f} (ene-2014) -> ${fin['precio_nominal']:.2f} (abr-2019), {((fin['precio_nominal']/ini['precio_nominal']-1)*100):.1f}%")
+print(f"Tarifa real:    ${ini['precio_real']:.2f} -> ${fin['precio_real']:.2f} (dic-2016), {((fin['precio_real']/ini['precio_real']-1)*100):.1f}%")
+print(f"IPC CABA:       {((fin['ipc_caba']/ini['ipc_caba']-1)*100):.1f}% en el mismo período")
+
+display(Image(filename=str(FIG / "fig01_tarifa_nominal_real.png")))
+display(Image(filename=str(FIG / "fig02_indice_tarifa_ipc.png")))
+
+===== CELL 10 =====
+anual = datos["demanda_anual"].sort_values("anio").copy()
+anual["crecimiento_pct"] = anual["viajes"].pct_change() * 100
+tabla_anual = anual.copy()
+tabla_anual["viajes"] = (tabla_anual["viajes"] / 1_000_000).round(1)
+tabla_anual.columns = ["Año", "Viajes (millones)", "Variación interanual (%)"]
+display(tabla_anual)
+
+# Cobertura comparable: 2019 tiene 362 días con registro (faltan 30/04, 01/05 y 29/05).
+promedio_diario = anual.set_index("anio")["viajes"] / datos["calidad"].set_index("anio")["fechas_distintas"]
+print("Promedio diario de viajes (millones):")
+print((promedio_diario / 1_000_000).round(3).to_string())
+print("Variación del promedio diario 2018-2019:", f"{(promedio_diario.loc[2019]/promedio_diario.loc[2018]-1)*100:.1f}%")
+
+display(Image(filename=str(FIG / "fig03_demanda_anual.png")))
+display(Image(filename=str(FIG / "fig04_demanda_mensual.png")))
+
+===== CELL 12 =====
+linea = datos["demanda_linea"]
+piv = linea.pivot(index="anio", columns="linea", values="viajes")
+tabla_linea = pd.DataFrame({
+    "Línea": piv.columns,
+    "Viajes 2014 (mill.)": (piv.loc[2014] / 1_000_000).round(1).values,
+    "Viajes 2019 (mill.)": (piv.loc[2019] / 1_000_000).round(1).values,
+    "Crecimiento 2014-2019 (%)": ((piv.loc[2019] / piv.loc[2014] - 1) * 100).round(1).values,
+    "Participación 2019 (%)": (piv.loc[2019] / piv.loc[2019].sum() * 100).round(1).values,
+})
+display(tabla_linea)
+
+nuevas = datos["nuevas"].copy()
+nuevas["viajes_totales"] = (nuevas["viajes_totales"] / 1_000_000).round(2)
+display(nuevas[["linea", "estacion_display", "primer_anio", "viajes_totales"]].rename(columns={
+    "linea": "Línea", "estacion_display": "Estación", "primer_anio": "Primer año",
+    "viajes_totales": "Viajes 2014-2019 (mill.)",
+}))
+
+top = datos["catalogo"].sort_values("viajes_totales", ascending=False).head(10).copy()
+top["viajes_totales"] = (top["viajes_totales"] / 1_000_000).round(1)
+display(top[["linea", "estacion_display", "viajes_totales"]].rename(columns={
+    "linea": "Línea", "estacion_display": "Estación", "viajes_totales": "Viajes acumulados (mill.)",
+}))
+
+display(Image(filename=str(FIG / "fig05_demanda_lineas.png")))
+display(Image(filename=str(FIG / "fig09_linea_h.png")))
+display(Image(filename=str(FIG / "fig08_top_estaciones.png")))
+
+===== CELL 14 =====
+mensual = datos["demanda_mensual"].copy()
+mensual["anio"] = mensual["fecha"].dt.year
+mensual["mes"] = mensual["fecha"].dt.month
+piv_mes = mensual.pivot(index="anio", columns="mes", values="viajes")
+indice = piv_mes.div(piv_mes.mean(axis=1), axis=0) * 100
+indice.columns = ["Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"]
+display(indice.round(0))
+
+display(Image(filename=str(FIG / "fig06_estacionalidad.png")))
+display(Image(filename=str(FIG / "fig07_perfil_horario.png")))
+
+===== CELL 16 =====
+panel = datos["panel"].sort_values("fecha").copy()
+panel = panel[panel["fecha"] <= "2019-04-01"].copy()
+panel["viajes_yoy"] = panel["viajes_total"].pct_change(12) * 100
+panel["precio_real_yoy"] = panel["precio_real"].pct_change(12) * 100
+
+corr = panel.dropna(subset=["viajes_yoy", "precio_real_yoy"])
+print("Correlación entre variación interanual de la demanda y de la tarifa real:")
+for lag in range(4):
+    valor = corr["viajes_yoy"].corr(corr["precio_real_yoy"].shift(lag))
+    print(f"  rezago {lag}: {valor:.3f}")
+
+d = panel.dropna(subset=["precio_real", "viajes_total"]).copy()
+d["log_viajes"] = np.log(d["viajes_total"])
+d["log_precio_real"] = np.log(d["precio_real"])
+d["tendencia"] = np.arange(len(d))
+d["mes_cat"] = d["mes"].astype(str)
+
+modelo = smf.ols(
+    "log_viajes ~ log_precio_real + tendencia + C(mes_cat)", data=d
+).fit(cov_type="HAC", cov_kwds={"maxlags": 3})
+ci = modelo.conf_int().loc["log_precio_real"].tolist()
+tabla_modelo = pd.DataFrame([{
+    "Modelo": "Log-log + tendencia + dummies mensuales",
+    "Elasticidad": modelo.params["log_precio_real"],
+    "IC 95% inferior": ci[0],
+    "IC 95% superior": ci[1],
+    "p-valor": modelo.pvalues["log_precio_real"],
+    "R²": modelo.rsquared,
+    "N": int(modelo.nobs),
+}])
+display(tabla_modelo.round(3))
+print("Lectura: un aumento de 10% en la tarifa real se asocia con una caída de aproximadamente "
+      f"{abs(modelo.params['log_precio_real'])*10:.2f}% en los viajes, manteniendo tendencia y estacionalidad.")
+
+filas = []
+for lin in sorted(datos["panel_linea"]["linea"].unique()):
+    dl = datos["panel_linea"][
+        (datos["panel_linea"]["linea"] == lin)
+        & (datos["panel_linea"]["fecha"] <= "2019-04-01")
+    ].dropna(subset=["precio_real", "viajes"]).copy()
+    dl["log_viajes"] = np.log(dl["viajes"])
+    dl["log_precio_real"] = np.log(dl["precio_real"])
+    dl["tendencia"] = np.arange(len(dl))
+    dl["mes_cat"] = dl["mes"].astype(str)
+    m = smf.ols("log_viajes ~ log_precio_real + tendencia + C(mes_cat)", data=dl).fit(
+        cov_type="HAC", cov_kwds={"maxlags": 3}
+    )
+    ci_l = m.conf_int().loc["log_precio_real"].tolist()
+    filas.append({
+        "Línea": lin,
+        "Elasticidad": m.params["log_precio_real"],
+        "IC 95% inferior": ci_l[0],
+        "IC 95% superior": ci_l[1],
+        "p-valor": m.pvalues["log_precio_real"],
+        "R²": m.rsquared,
+        "N": int(m.nobs),
+    })
+display(pd.DataFrame(filas).round(3))
+
+robustez = TAB / "tabla_robustez_elasticidad.csv"
+if robustez.exists():
+    display(pd.read_csv(robustez, encoding="utf-8-sig").round(3))
+else:
+    print("Para ver la tabla de robustez, ejecutar src/03_robustez.py")
+
+display(Image(filename=str(FIG / "fig10_demanda_vs_tarifa.png")))
+display(Image(filename=str(FIG / "fig11_dispersion_yoy.png")))
+display(Image(filename=str(FIG / "fig12_elasticidad_lineas.png")))
+
+===== CELL 18 =====
+p = datos["panel"].copy()
+p = p[p["fecha"] <= "2019-04-01"].copy()
+p["ingreso_nominal"] = p["viajes_total"] * p["precio_nominal"]
+p["ingreso_real"] = p["ingreso_nominal"] / p["ipc_caba_base_dic2016"] * 100
+
+ingresos = (
+    p.groupby("anio")
+    .agg(
+        viajes=("viajes_total", "sum"),
+        ingreso_nominal=("ingreso_nominal", "sum"),
+        ingreso_real=("ingreso_real", "sum"),
+        meses=("mes", "count"),
+    )
+    .reset_index()
+)
+tabla_ingresos = ingresos.copy()
+tabla_ingresos["viajes"] = (tabla_ingresos["viajes"] / 1_000_000).round(1)
+tabla_ingresos["ingreso_nominal"] = (tabla_ingresos["ingreso_nominal"] / 1_000_000_000).round(2)
+tabla_ingresos["ingreso_real"] = (tabla_ingresos["ingreso_real"] / 1_000_000_000).round(2)
+tabla_ingresos.columns = [
+    "Año", "Viajes (mill.)", "Ingreso nominal (miles de millones $)",
+    "Ingreso real (miles de millones $ dic-2016)", "Meses",
+]
+display(tabla_ingresos)
+
+completo = ingresos[ingresos["meses"] == 12]
+print("Variación 2014-2018 del ingreso nominal:", f"{(completo.loc[completo.anio==2018,'ingreso_nominal'].iloc[0]/completo.loc[completo.anio==2014,'ingreso_nominal'].iloc[0]-1)*100:.1f}%")
+print("Variación 2014-2018 del ingreso real:", f"{(completo.loc[completo.anio==2018,'ingreso_real'].iloc[0]/completo.loc[completo.anio==2014,'ingreso_real'].iloc[0]-1)*100:.1f}%")
+print("2019 corresponde solo a enero-abril.")
+
+display(Image(filename=str(FIG / "fig13_ingresos.png")))
+
+===== CELL 20 =====
+res = json.loads((ROOT / "outputs" / "resultados.json").read_text(encoding="utf-8"))
+print("TARIFA")
+print(f"  Nominal ene-2014: ${res['tarifa']['tarifa_nominal_2014_01']:.2f}")
+print(f"  Nominal abr-2019: ${res['tarifa']['tarifa_nominal_2019_04']:.2f}")
+print(f"  Variación nominal: {res['tarifa']['tarifa_nominal_var_pct']:.1f}%")
+print(f"  Variación real:    {res['tarifa']['tarifa_real_var_pct']:.1f}%")
+print(f"  Inflación CABA:    {res['tarifa']['ipc_var_pct']:.1f}%")
+print()
+print("DEMANDA")
+print(f"  2014: {res['demanda']['demanda_2014']/1e6:.1f} millones")
+print(f"  2019: {res['demanda']['demanda_2019']/1e6:.1f} millones")
+print(f"  Variación 2014-2019: {res['demanda']['demanda_var_2014_2019_pct']:.1f}%")
+print(f"  Estaciones existentes en 2014: {res['demanda']['demanda_existentes_var_pct']:.1f}%")
+print(f"  Nuevas estaciones (2019): {res['demanda']['demanda_nuevas_2019']/1e6:.1f} millones")
+print(f"  Línea H: {res['demanda']['linea_h_var_pct']:.1f}%")
+print()
+print("RELACIÓN TARIFA-DEMANDA")
+print(f"  Elasticidad principal: {res['relacion']['elasticidad_principal']:.3f}")
+print(f"  IC 95%: [{res['relacion']['elasticidad_ic95'][0]:.3f}, {res['relacion']['elasticidad_ic95'][1]:.3f}]")
+print(f"  R²: {res['relacion']['elasticidad_r2']:.3f} | N: {res['relacion']['elasticidad_n']}")
+print(f"  Correlación YoY contemporánea: {res['relacion']['correlaciones_yoy']['lag_0']:.3f}")
+print(f"  Correlación YoY con un rezago: {res['relacion']['correlaciones_yoy']['lag_1']:.3f}")
+print()
+print("INGRESOS")
+print(f"  Variación nominal 2014-2018: {res['ingresos']['ingreso_nominal_var_pct']:.1f}%")
+print(f"  Variación real 2014-2018:    {res['ingresos']['ingreso_real_var_pct']:.1f}%")

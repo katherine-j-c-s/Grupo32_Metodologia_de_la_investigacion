@@ -1,0 +1,148 @@
+{
+  "tarifa": {
+    "tarifa_nominal_2014_01": 3.5,
+    "tarifa_nominal_2019_04": 19.0,
+    "tarifa_real_2014_01": 8.253323076923078,
+    "tarifa_real_2019_04": 8.949515684924771,
+    "tarifa_nominal_var_pct": 442.8571428571429,
+    "tarifa_real_var_pct": 8.435300563336746,
+    "ipc_var_pct": 400.6276923076923,
+    "cambios_tarifarios": 9
+  },
+  "demanda": {
+    "demanda_2014": 255189625.0,
+    "demanda_2019": 341340501.0,
+    "demanda_var_2014_2019_pct": 33.75955272476301,
+    "demanda_existentes_2019": 326745111.0,
+    "demanda_existentes_var_pct": 28.04012349639997,
+    "demanda_nuevas_2019": 14595390.0,
+    "linea_h_var_pct": 364.6056837377191,
+    "linea_h_existentes_var_pct": 206.4644541595035,
+    "crecimiento_anual": {
+      "2015": 10.71,
+      "2016": 11.29,
+      "2017": 4.54,
+      "2018": 5.99,
+      "2019": -2.03
+    }
+  },
+  "estaciones": {
+    "top_estacion": "Constitución",
+    "top_estacion_viajes": 131470163.0
+  },
+  "relacion": {
+    "elasticidad_principal": -0.1677231418824685,
+    "elasticidad_ic95": [
+      -0.2197212943539792,
+      -0.11572498941095782
+    ],
+    "elasticidad_r2": 0.9369833339849036,
+    "elasticidad_n": 64,
+    "elasticidad_por_linea": {
+      "A": {
+        "coef": -0.18155968068374762,
+        "ic95": [
+          -0.23328145265620298,
+          -0.12983790871129225
+        ]
+      },
+      "B": {
+        "coef": -0.17117447814653586,
+        "ic95": [
+          -0.23987425865350365,
+          -0.10247469763956808
+        ]
+      },
+      "C": {
+        "coef": -0.13656719008846352,
+        "ic95": [
+          -0.3063580697951003,
+          0.033223689618173236
+        ]
+      },
+      "D": {
+        "coef": -0.1920386913419525,
+        "ic95": [
+          -0.2568256773570989,
+          -0.12725170532680613
+        ]
+      },
+      "E": {
+        "coef": -0.17526341732663897,
+        "ic95": [
+          -0.2450414930240326,
+          -0.10548534162924533
+        ]
+      },
+      "H": {
+        "coef": -0.3867255174855839,
+        "ic95": [
+          -0.5770485141434702,
+          -0.19640252082769757
+        ]
+      }
+    },
+    "correlaciones_yoy": {
+      "lag_0": -0.5680377714338444,
+      "lag_1": -0.5984080656226518,
+      "lag_2": -0.5371298464395499,
+      "lag_3": -0.39492785798912056
+    },
+    "eventos": [
+      {
+        "Evento": "Mar-2014",
+        "Variación nominal (%)": 28.57142857142858,
+        "Variación real (%)": 24.044368600682574,
+        "Demanda 3 meses previos (mill.)": 17.5742255,
+        "Demanda 3 meses posteriores (mill.)": 21.56835333333333,
+        "Cambio pre-post (%)": 22.727191211546316,
+        "Var. interanual previa (%)": NaN,
+        "Var. interanual posterior (%)": NaN,
+        "Diferencia YoY (p.p.)": NaN
+      },
+      {
+        "Evento": "Nov-2016",
+        "Variación nominal (%)": 66.66666666666667,
+        "Variación real (%)": 63.4301214475063,
+        "Demanda 3 meses previos (mill.)": 30.464071333333333,
+        "Demanda 3 meses posteriores (mill.)": 23.798167666666668,
+        "Cambio pre-post (%)": -21.88119766963955,
+        "Var. interanual previa (%)": 15.6659431196342,
+        "Var. interanual posterior (%)": 8.821635451871645,
+        "Diferencia YoY (p.p.)": -6.844307667762555
+      },
+      {
+        "Evento": "Ago-2018",
+        "Variación nominal (%)": 66.66666666666667,
+        "Variación real (%)": 60.794533821146324,
+        "Demanda 3 meses previos (mill.)": 30.703618,
+        "Demanda 3 meses posteriores (mill.)": 31.685979666666668,
+        "Cambio pre-post (%)": 3.199498074352891,
+        "Var. interanual previa (%)": 5.23584185134179,
+        "Var. interanual posterior (%)": 2.0298375202816965,
+        "Diferencia YoY (p.p.)": -3.206004331060093
+      },
+      {
+        "Evento": "Abr-2019",
+        "Variación nominal (%)": 15.15151515151516,
+        "Variación real (%)": 11.045229559832759,
+        "Demanda 3 meses previos (mill.)": 24.778256666666667,
+        "Demanda 3 meses posteriores (mill.)": 28.012065,
+        "Cambio pre-post (%)": 13.05099215347003,
+        "Var. interanual previa (%)": -1.1753132347420185,
+        "Var. interanual posterior (%)": -6.156129546318267,
+        "Diferencia YoY (p.p.)": -4.980816311576248
+      }
+    ]
+  },
+  "ingresos": {
+    "ingreso_nominal_2014": 1113204861.5,
+    "ingreso_nominal_2018": 3449242631.0,
+    "ingreso_real_2014": 2222632023.3766522,
+    "ingreso_real_2018": 2215571203.1329775,
+    "ingreso_nominal_var_pct": 209.84796691889045,
+    "ingreso_real_var_pct": -0.317678327739912,
+    "ingreso_2019_parcial_nominal": 1735903581.0,
+    "ingreso_2019_parcial_real": 859184358.2816426
+  }
+}

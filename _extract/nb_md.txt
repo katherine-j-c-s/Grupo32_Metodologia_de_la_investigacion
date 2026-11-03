@@ -1,0 +1,73 @@
+===== CELL 0 =====
+# Evolución del precio del boleto y la demanda de viajes en el Subte de Buenos Aires (2014-2019)
+
+**Trabajo Final Integrador — Tercera entrega**  
+Universidad del Gran Rosario — Licenciatura en Ciencia de Datos  
+Grupo 32: Katherine Contreras, Mateo Maibach, Joaquín Betes, Emilce Robles y Silvina Moyano
+
+Este notebook reproduce el análisis descriptivo y la estimación de elasticidad-precio que se presentan en el informe final. Incluye las tablas procesadas y las figuras necesarias, por lo que se ejecuta de principio a fin sin pasos previos.
+
+**Requisitos:** `pandas`, `numpy`, `matplotlib` y `statsmodels` (en Google Colab ya vienen preinstalados).
+
+===== CELL 1 =====
+**Ejecución en Google Colab:** subir la carpeta `entrega_colab` a Google Drive y abrir este notebook desde allí. La primera celda localiza la carpeta del proyecto automáticamente y monta Drive si hace falta. Luego usar *Entorno de ejecución → Ejecutar todas*.
+
+===== CELL 3 =====
+## 1. Carga de datos
+
+Se cargan las tablas livianas generadas por el ETL. La base completa de 70 millones de registros queda en `data/processed/subte.duckdb`; para el análisis se usan agregados mensuales, anuales, por línea y por estación.
+
+===== CELL 5 =====
+## 2. Calidad y cobertura
+
+Se comparan las filas leídas y válidas de cada archivo, la cobertura de días y los totales de viajes. El control clave es que la suma de molinetes coincida con `viajes_anual.csv`.
+
+===== CELL 7 =====
+## 3. Evolución de la tarifa
+
+La tarifa nominal se deflacta con el IPC CABA (base diciembre 2016 = 100). La serie de tarifa termina en abril de 2019, por lo que el análisis tarifa-demanda se restringe a ese mes.
+
+===== CELL 9 =====
+## 4. Evolución de la demanda total
+
+La demanda se mide con los viajes registrados en molinetes. Se presentan los totales anuales, la variación interanual y la serie mensual con media móvil de 12 meses.
+
+===== CELL 11 =====
+## 5. Líneas, estaciones y nuevos tramos
+
+Se comparan los viajes anuales por línea y se separa el crecimiento de las estaciones que ya existían en 2014 del aporte de las estaciones incorporadas después. La línea H es el caso más destacado por la extensión de su traza.
+
+===== CELL 13 =====
+## 6. Patrones temporales
+
+El índice estacional compara cada mes con el promedio del año (100 = mes promedio). El perfil horario usa los registros de 2019 y distingue días hábiles de fin de semana.
+
+===== CELL 15 =====
+## 7. Relación tarifa-demanda y elasticidad
+
+Se estima un modelo log-log mensual:
+
+$$\ln(Q_t) = \alpha + \beta \ln(P_t^{real}) + \gamma t + \delta_m + \varepsilon_t$$
+
+donde $Q_t$ son los viajes, $P_t^{real}$ es la tarifa real, $t$ una tendencia lineal y $\delta_m$ dummies mensuales. Los errores estándar son HAC (Newey-West, 3 rezagos). $\beta$ se interpreta como elasticidad-precio de la demanda. La estimación es exploratoria y no causal.
+
+===== CELL 17 =====
+## 8. Ingresos estimados
+
+Se multiplican los viajes mensuales por la tarifa nominal vigente. Es una estimación analítica: no incorpora descuentos, franquicias, pases ni evasión, por lo que no equivale a la recaudación efectiva.
+
+===== CELL 19 =====
+## 9. Síntesis de resultados
+
+Se recuperan los valores principales de `outputs/resultados.json` para cerrar el análisis.
+
+===== CELL 21 =====
+### Conclusiones del análisis
+
+1. **La tarifa real no subió tanto como la nominal.** Entre enero de 2014 y abril de 2019 la tarifa nominal pasó de $3,50 a $19,00 (+442,9%), pero la inflación de CABA acumuló +400,6%. En términos reales, la tarifa pasó de $8,25 a $8,95 (base diciembre 2016), solo +8,4%.
+2. **La demanda creció, con un cambio de tendencia en 2019.** Los viajes pasaron de 255,2 a 341,3 millones (+33,8%). El crecimiento fue fuerte en 2015-2016, se moderó en 2017-2018 y se volvió negativo en 2019 (-2,0%; -1,2% en promedio diario comparable).
+3. **La expansión de la red explica una parte del crecimiento.** Las estaciones existentes en 2014 crecieron +28,0%; las nuevas aportaron 14,6 millones de viajes en 2019. La línea H creció +364,6% y pasó de 2,9% a 10,2% de la demanda.
+4. **La relación tarifa-demanda es negativa pero moderada.** La elasticidad estimada es -0,168 (IC 95%: -0,220 a -0,116; R² = 0,937; N = 64). La cifra es una asociación condicional, no un efecto causal.
+5. **Los ingresos nominales crecieron fuerte, pero los reales quedaron estancados.** Entre 2014 y 2018 el ingreso nominal estimado aumentó +209,8%, mientras que el ingreso real cayó -0,3%.
+
+El detalle metodológico, las tablas completas y las limitaciones se desarrollan en `docs/informe_final.pdf`.
