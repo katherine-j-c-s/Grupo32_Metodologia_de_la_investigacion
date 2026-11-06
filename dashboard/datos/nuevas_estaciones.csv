@@ -1,0 +1,8 @@
+﻿id_estacion;linea;estacion;estacion_display;primer_anio;ultimo_anio;viajes_totales;es_estacion_pasajeros
+H|CORDOBA;H;CORDOBA;Córdoba;2015;2019;8099887,0;True
+H|LAS HERAS;H;LAS HERAS;Las Heras;2015;2019;14750481,0;True
+H|SANTA FE;H;SANTA FE;Santa Fe;2016;2019;10780341,0;True
+H|FACULTAD DE DERECHO;H;FACULTAD DE DERECHO;Facultad de Derecho;2018;2019;3025260,0;True
+E|CATALINAS;E;CATALINAS;Catalinas;2019;2019;792122,0;True
+E|CORREO CENTRAL;E;CORREO CENTRAL;Correo Central;2019;2019;1122694,0;True
+E|RETIRO;E;RETIRO;Retiro;2019;2019;862060,0;True

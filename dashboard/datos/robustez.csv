@@ -1,0 +1,7 @@
+﻿Modelo;Muestra;Índice de precios;Elasticidad;IC 95% inferior;IC 95% superior;p-valor;R²;N
+Principal: real + tendencia;2014-01 a 2019-04;IPC CABA;-0,168;-0,22;-0,116;0,0;0,937;64
+Sin tendencia lineal;2014-01 a 2019-04;IPC CABA;-0,366;-0,583;-0,149;0,001;0,683;64
+Con meses atípicos;2014-01 a 2019-04;IPC CABA;-0,152;-0,207;-0,098;0,0;0,939;64
+Tarifa nominal;2014-01 a 2019-04;Nominal;-0,157;-0,208;-0,106;0,0;0,938;64
+Submuestra CABA;2017-01 a 2019-04;IPC CABA;-0,201;-0,315;-0,087;0,001;0,928;28
+Submuestra nacional;2017-01 a 2019-04;IPC nacional;-0,202;-0,32;-0,085;0,001;0,926;28
